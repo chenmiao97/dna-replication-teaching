@@ -5,7 +5,7 @@
 ## 在线访问
 
 你可以通过以下链接直接访问应用：
-[https://你的用户名.github.io/仓库名称](https://你的用户名.github.io/仓库名称)
+[https://chenmiao97.github.io/dna-replication-teaching/](https://chenmiao97.github.io/dna-replication-teaching/)
 
 ## 使用方法
 
