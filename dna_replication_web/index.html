@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DNA复制交互教学</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: #F5F5F5;
+        }
+
+        #sketch-container {
+            width: 100vw;
+            height: 90vh;
+            background-color: #F5F5F5;
+        }
+
+        #control-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 10vh;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 80px;
+            padding: 10px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            min-width: 100px;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        #next-btn {
+            background-color: #2196F3;
+        }
+
+        #next-btn:hover {
+            background-color: #1976D2;
+        }
+
+        #reset-btn {
+            background-color: #f44336;
+        }
+
+        #reset-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        #help-btn {
+            background-color: #9C27B0;
+        }
+        
+        #help-btn:hover {
+            background-color: #7B1FA2;
+        }
+        
+        #title {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 8px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">DNA复制交互教学</div>
+    <div id="sketch-container"></div>
+    <div id="control-bar">
+        <button id="polymerize-btn" class="btn">聚合</button>
+        <button id="next-btn" class="btn">解旋</button>
+        <button id="reset-btn" class="btn">重置</button>
+        <button id="help-btn" class="btn" onclick="window.location.href='help.html'">帮助</button>
+    </div>
+
+    <script>
+        // 添加错误处理
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error));
+            return false;
+        };
+    </script>
+    <script src="js/dna.js"></script>
+    <script>
+        let dna;
+        let hammer;
+        let buttonImages = [];
+
+        function preload() {
+            // 加载按钮图片
+            buttonImages = [
+                loadImage('Images/Clogo.png'),
+                loadImage('Images/Glogo.png'),
+                loadImage('Images/Alogo.png'),
+                loadImage('Images/Tlogo.png')
+            ];
+        }
+
+        function setup() {
+            const canvas = createCanvas(windowWidth, windowHeight * 0.9);
+            canvas.parent('sketch-container');
+            background('#F5F5F5');
+
+            // 初始化DNA对象
+            dna = new DNA();
+
+            // 初始化Hammer.js手势识别
+            hammer = new Hammer(canvas.elt);
+            hammer.get('pinch').set({ enable: true });
+            hammer.on('pinchstart pinchmove pinchend', function(e) {
+                const scale = e.scale;
+                dna.setScale(scale);
+            });
+
+            // 添加按钮事件监听
+            document.getElementById('next-btn').addEventListener('click', function() {
+                dna.startHelicaseAnimation();
+            });
+
+            document.getElementById('polymerize-btn').addEventListener('click', function() {
+                dna.startPolymerizing();
+            });
+
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                // 重置DNA对象
+                dna = new DNA();
+            });
+        }
+
+        function draw() {
+            background('#F5F5F5');
+            dna.draw();
+            dna.updateAnimation();
+        }
+
+        function mousePressed() {
+            const mouseXInCanvas = mouseX - width/2;
+            const mouseYInCanvas = mouseY - height/2;
+            
+            // 检查是否点击了按钮
+            if (dna.checkButtonClick(mouseXInCanvas, mouseYInCanvas)) {
+                return;
+            }
+            
+            // 检查是否点击了DNA聚合酶
+            if (dna.checkPolymeraseClick(mouseXInCanvas, mouseYInCanvas)) {
+                dna.isDraggingPolymerase = true;
+                return;
+            }
+            
+            // 检查是否点击了解旋酶
+            const helicasePos = dna.getHelicasePosition();
+            const distance = dist(mouseXInCanvas, mouseYInCanvas, helicasePos.x, helicasePos.y);
+            
+            if (distance < dna.helicaseSize/2) {
+                dna.isDragging = true;
+            }
+        }
+
+        function mouseDragged() {
+            if (dna.isDragging) {
+                dna.updateHelicasePosition(mouseX - width/2, mouseY - height/2);
+            }
+            if (dna.isDraggingBase) {
+                dna.updateBaseDrag(mouseX - width/2, mouseY - height/2);
+            }
+            if (dna.isDraggingPolymerase) {
+                dna.updatePolymerasePosition(mouseX - width/2, mouseY - height/2);
+            }
+        }
+
+        function mouseReleased() {
+            if (dna.isDragging) {
+                dna.isDragging = false;
+                
+                // 先检查下链配对完成后是否在下链左端附近
+                if (dna.isBottomChainReady && dna.fixedBottomBases.length === dna.sequence.length) {
+                    if (dna.isNearBottomChainStart()) {
+                        console.log("解旋酶固定在下链左端");
+                        dna.isAttached = true;
+                    } else {
+                        console.log("解旋酶在下链配对完成后只能固定在左端");
+                        dna.isAttached = false;
+                    }
+                } 
+                // 然后检查是否在DNA起点附近(正常情况)
+                else if (dna.isNearDNAStart()) {
+                    console.log("解旋酶固定在DNA起点");
+                    dna.isAttached = true;
+                } else {
+                    dna.isAttached = false;
+                }
+            }
+            
+            if (dna.isDraggingBase) {
+                dna.endBaseDrag();
+            }
+            
+            if (dna.isDraggingPolymerase) {
+                dna.isDraggingPolymerase = false;
+                // 使用新方法处理DNA聚合酶的拖拽结束
+                dna.endPolymeraseDrag();
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight * 0.9);
+        }
+    </script>
+</body>
+</html> 
